@@ -1,0 +1,85 @@
+# Scene-specific analytics configuration.
+#
+# IMPORTANT: counting_lines' point1/point2 are pixel coordinates and MUST be
+# recalibrated for each camera/video — these defaults are tuned for
+# data/raw/samples/highway_night.webm (1920x1080, elevated fixed highway
+# camera, near carriageway). There is no universal "right" line position; it
+# depends entirely on where the road is in your specific frame.
+
+counting_lines:
+  - name: main_line
+    point1: [280, 650]
+    point2: [1150, 650]
+    direction_a_label: "toward camera"   # side the line's "positive" side faces
+    direction_b_label: "away from camera"
+
+density:
+  thresholds:
+    - {max: 10, label: LOW}
+    - {max: 25, label: MODERATE}
+    - {max: 40, label: HIGH}
+    - {max: null, label: CONGESTED}   # null = no upper bound
+
+congestion:
+  # Minimum density label (by rank in the thresholds list above) that can
+  # contribute to a congestion determination. Density alone never triggers
+  # congestion (spec section 15) — the speed-proxy signal below must also agree.
+  density_trigger: HIGH
+  # Pixel-space speed proxy threshold (NOT a calibrated real-world speed —
+  # see Phase 6 for that). A track averaging below this many px/sec over its
+  # recent trajectory window counts as "slow."
+  slow_speed_px_per_sec: 15.0
+  # Fraction of currently-active tracks that must be "slow" for congestion
+  # to be flagged, on top of the density trigger.
+  min_slow_fraction: 0.5
+
+direction:
+  # "screen" = directions are relative to the image plane (UP/DOWN/LEFT/RIGHT
+  # and diagonals), not a verified geographic compass — see
+  # src/traffic_analysis.py's module docstring for why.
+  reference: screen
+
+# Optional — omit expected_direction (or the whole section) to disable
+# wrong-way detection entirely. Left disabled here: highway_night.webm shows
+# two carriageways side by side (divided by a median, opposite directions of
+# travel), and WrongWayDetector has no concept of screen regions — it would
+# apply a single "expected direction" to the whole frame and incorrectly
+# flag the far carriageway's entirely normal traffic as wrong-way. Properly
+# supporting this scene would need a region-gated wrong-way check (e.g. only
+# evaluate tracks whose trajectory stays within a configured zone) — not
+# built yet; noted as a real gap rather than worked around by disabling it
+# silently.
+# wrong_way:
+#   expected_direction: DOWN
+#   min_consecutive_frames: 5
+#   tolerance_steps: 1
+
+stopped_vehicle:
+  movement_threshold_px: 10.0
+  min_stopped_duration_sec: 5.0
+
+restricted_zones:
+  - name: shoulder_no_stopping
+    # Left shoulder of the near carriageway — a vehicle stopped here would be
+    # a real, meaningful violation. Adjust per your own scene; these
+    # coordinates are specific to this clip.
+    polygon: [[250, 550], [420, 550], [420, 750], [250, 750]]
+
+# APPROXIMATE speed estimation — see src/speed_estimation.py's module
+# docstring for the full honest caveat (no perspective correction, single
+# scalar scale factor, most accurate near the reference line only).
+#
+# point1/point2 and real_world_distance_m below are a VISUALLY-ESTIMATED
+# illustrative example for highway_night.webm — picked to span roughly one
+# travel lane at the depth of this project's main_line/counting-line area
+# (y=650, same depth as the counting line, so the speed estimate is most
+# trustworthy exactly where vehicles are also being counted), assigned the
+# nominal US highway lane width (~3.5m). This was NOT surveyed on-site. A
+# real deployment must remeasure this from the actual camera and actual
+# scene, ideally with a real reference object of known size (a measured
+# lane, a vehicle of known length, lane-marking dash spacing) rather than
+# reusing this example.
+speed_calibration:
+  point1: [500, 650]
+  point2: [650, 650]
+  real_world_distance_m: 3.5

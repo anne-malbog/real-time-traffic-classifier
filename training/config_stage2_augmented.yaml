@@ -1,0 +1,68 @@
+# Stage-2 retrain config — Phase 8 (traffic-yolo-augmented).
+#
+# This is the config the Colab training notebook uses. It targets the larger
+# stage-2 dataset (data/dataset_stage2.yaml, 9,211 images, 6 classes, real
+# dense street traffic) with augmentation deliberately tuned to strengthen
+# small/distant-vehicle detection — the same category of failure diagnosed on
+# golden_gate_bridge_night.webm (see README's "Inference Resolution &
+# Experiment Tracking (Phase 8)" section). That specific failure was already
+# fixed for free via inference-time imgsz (no retrain needed); this config is
+# the complementary, *training-side* half of the same investigation — making
+# the model itself better at small objects, not just giving it a bigger canvas
+# to look at.
+#
+# Run on Colab: python -m training.train --config training/config_stage2_augmented.yaml
+
+data: data/dataset_stage2.yaml
+model: yolo11n.pt             # fine-tune from COCO-pretrained, not from scratch
+epochs: 100                   # real run, not the 2-epoch local smoke-test default
+imgsz: 640                    # matches this dataset's native export resolution — training
+                               # beyond native resolution just upsamples already-downscaled
+                               # images with no new detail; the imgsz=1280 fix already proven
+                               # in this project is an INFERENCE-time lever (see README) and
+                               # works independent of training resolution, so it's applied at
+                               # inference regardless of what this trains at.
+batch: 16                     # Colab GPU has headroom this project's local CPU doesn't
+lr0: 0.01
+device: 0                     # Colab GPU (first CUDA device)
+conf: 0.25
+iou: 0.45
+patience: 20
+workers: 8
+project: outputs/training_runs
+name: stage2_augmented
+mlflow_experiment: traffic-yolo-augmented
+
+# Tuned augmentation — each change has a specific small/distant-vehicle rationale:
+scale: 0.9        # was 0.5 (Ultralytics default). Wider scale-jitter range means training
+                   # sees a wider distribution of apparent object sizes per image, including
+                   # much smaller ones — directly targets the "model has low-confidence signal
+                   # but rarely commits" pattern found during diagnosis (conf sweep showed
+                   # boxes at 0.03-0.08 on distant vehicles the default threshold discards).
+translate: 0.2     # was 0.1. More spatial jitter so small/distant vehicles near frame edges
+                   # (common in this project's elevated-camera angles) aren't systematically
+                   # under-represented near image borders.
+hsv_v: 0.5         # was 0.4. Slightly stronger brightness jitter — this project's whole
+                   # sample set skews night/low-light (3 of 4 clips), so a bit more brightness
+                   # augmentation is a reasonable, low-risk match to deployment conditions.
+mosaic: 1.0        # unchanged (already Ultralytics' max) — mosaic's 4-image tiling already
+                   # shrinks each sub-image, which is inherently good for small-object density;
+                   # nothing to gain by changing it.
+close_mosaic: 10   # unchanged — still disable mosaic for the last 10 epochs so the model
+                   # fine-tunes on realistic (non-tiled) image statistics before finishing.
+copy_paste: 0.3    # was 0.0. Pastes objects from other training images to increase per-image
+                   # instance density, including small ones. CAVEAT, stated plainly: Ultralytics'
+                   # copy-paste implementation is strongest with segmentation masks; this
+                   # dataset is bbox-only, so its effect here is expected to be smaller than in
+                   # a segmentation-labeled dataset. Kept on at a modest 0.3 (not higher) for
+                   # that reason — a deliberately conservative bet, not assumed to be a large win.
+copy_paste_mode: flip
+
+# Deliberately left at Ultralytics' defaults (not tuned here), with reasons:
+#   - degrees/shear/perspective: 0 — this project's cameras are fixed and roughly
+#     level; rotating/shearing training images doesn't match real deployment geometry.
+#   - flipud: 0 — vertically flipping a vehicle (upside down) is not a real scenario
+#     for any camera angle this project targets.
+#   - mixup: 0 — blending two images can wash out exactly the faint/low-contrast
+#     signal on small distant vehicles this run is trying to strengthen, so it's
+#     left off rather than risk working against the goal.

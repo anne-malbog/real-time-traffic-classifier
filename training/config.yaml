@@ -1,0 +1,31 @@
+# Default training hyperparameters. Any value here can be overridden with a
+# matching --flag on the command line (see train.py --help). This file is the
+# checked-in, documented baseline; CLI flags are for one-off experiment runs.
+
+data: data/dataset.yaml       # dataset.yaml produced by training/prepare_dataset.py
+model: yolo11n.pt             # starting checkpoint — nano model for fast local iteration
+epochs: 2                     # smoke-test default; real runs (Colab) override this much higher
+imgsz: 416                    # matches this dataset's native export resolution
+batch: 8
+lr0: 0.01                     # Ultralytics default initial learning rate
+device: cpu                   # "cpu", "0" (first GPU), "0,1", etc.
+conf: 0.25                    # confidence threshold used for in-training validation metrics
+iou: 0.45                     # IoU threshold (NMS) used for in-training validation metrics
+patience: 20                  # epochs with no improvement before early stopping
+workers: 2                    # dataloader worker processes
+project: outputs/training_runs
+name: smoke_test
+mlflow_experiment: traffic-yolo-baseline   # e.g. traffic-yolo-baseline, -augmented, -finetuned, -optimized
+
+# Augmentation knobs — values below are Ultralytics' own defaults, kept
+# explicit here so the baseline is fully documented rather than implicit.
+# See training/config_stage2_augmented.yaml for the tuned values used in the
+# Phase 8 small/distant-vehicle stage-2 retrain, and training/train.py's
+# AUGMENTATION_DEFAULTS docstring for why each one was chosen.
+scale: 0.5
+translate: 0.1
+hsv_v: 0.4
+mosaic: 1.0
+close_mosaic: 10
+copy_paste: 0.0
+copy_paste_mode: flip

@@ -1,0 +1,61 @@
+# Scene-specific analytics configuration for data/raw/samples/city_street_daytime.webm
+# (1920x1080, elevated fixed camera over a San Francisco street intersection, daytime).
+#
+# Use with: --source data/raw/samples/city_street_daytime.webm --scene-config configs/analytics_city_street.yaml
+#
+# IMPORTANT — this clip is a TIME-LAPSE (sped up from its original capture rate;
+# 693 real frames, container metadata misreports both fps and frame count, same
+# pattern as this project's other Commons webm clips — always verified by reading
+# the full file, never trusted from CAP_PROP_FPS/FRAME_COUNT). Detection, tracking,
+# and counting remain valid (they only depend on what's visible per frame), but
+# real-elapsed-time-dependent features are NOT: no speed_calibration is defined
+# here, and any dwell-time-based read (stopped_vehicle duration) should be treated
+# as approximate at best. See docs/failure_analysis.md case #5 for the full
+# reasoning — this is a documented, deliberate omission, not an oversight.
+#
+# See configs/analytics.yaml (the primary, highway_night.webm config) for the full
+# commentary on why every value here is scene-specific and must be recalibrated per
+# camera — not repeated here.
+
+counting_lines:
+  - name: main_line
+    point1: [925, 330]
+    point2: [1250, 330]
+    direction_a_label: "toward camera"
+    direction_b_label: "away from camera"
+
+density:
+  thresholds:
+    - {max: 10, label: LOW}
+    - {max: 25, label: MODERATE}
+    - {max: 40, label: HIGH}
+    - {max: null, label: CONGESTED}
+
+congestion:
+  density_trigger: HIGH
+  slow_speed_px_per_sec: 15.0
+  min_slow_fraction: 0.5
+
+direction:
+  reference: screen
+
+# Disabled: this is a genuine two-way street (traffic visible moving both toward
+# and away from camera in the same lanes-of-travel), same WrongWayDetector
+# limitation as every other multi-directional clip in this project — a single
+# global "expected direction" would flag half of all normal traffic.
+# wrong_way:
+#   expected_direction: UP
+#   min_consecutive_frames: 5
+#   tolerance_steps: 1
+
+stopped_vehicle:
+  movement_threshold_px: 10.0
+  min_stopped_duration_sec: 5.0
+
+restricted_zones:
+  - name: no_turn_zone
+    # The painted "NO TURN" pocket-lane marking in the center of the street,
+    # visible just before the intersection — a real marked no-stopping area.
+    polygon: [[965, 380], [1090, 380], [1090, 470], [965, 470]]
+
+# No speed_calibration — see the time-lapse note at the top of this file.

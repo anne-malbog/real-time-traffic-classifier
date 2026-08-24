@@ -1,0 +1,12 @@
+path: C:\Users\anne\Documents\Projects\real-time-traffic-classifier\data\processed_stage2
+train: images/train
+val: images/val
+test: images/test
+nc: 6
+names:
+- bus
+- car
+- microbus
+- motorbike
+- pickup-van
+- truck

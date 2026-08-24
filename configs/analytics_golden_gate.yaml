@@ -1,0 +1,57 @@
+# Scene-specific analytics configuration for data/raw/samples/golden_gate_bridge_night.webm
+# (1920x1080, elevated fixed tripod shot down the Golden Gate Bridge deck, night).
+#
+# Use with: --source data/raw/samples/golden_gate_bridge_night.webm --scene-config configs/analytics_golden_gate.yaml
+#
+# See configs/analytics.yaml (the primary, highway_night.webm config) for the full
+# commentary on why every value here is scene-specific and must be recalibrated per
+# camera — not repeated here.
+
+counting_lines:
+  - name: main_line
+    point1: [650, 750]
+    point2: [1350, 750]
+    direction_a_label: "toward camera"
+    direction_b_label: "away from camera"
+
+density:
+  thresholds:
+    - {max: 10, label: LOW}
+    - {max: 25, label: MODERATE}
+    - {max: 40, label: HIGH}
+    - {max: null, label: CONGESTED}
+
+congestion:
+  density_trigger: HIGH
+  slow_speed_px_per_sec: 15.0
+  min_slow_fraction: 0.5
+
+direction:
+  reference: screen
+
+# Disabled: this is a two-way bridge crossing (opposing traffic on the same deck,
+# no median), same WrongWayDetector limitation as the primary config — a single
+# global "expected direction" would flag half of all normal traffic.
+# wrong_way:
+#   expected_direction: DOWN
+#   min_consecutive_frames: 5
+#   tolerance_steps: 1
+
+stopped_vehicle:
+  movement_threshold_px: 10.0
+  min_stopped_duration_sec: 5.0
+
+restricted_zones:
+  - name: shoulder_no_stopping
+    # Right-side shoulder/walkway edge of the bridge deck.
+    polygon: [[1380, 650], [1550, 650], [1550, 900], [1380, 900]]
+
+# APPROXIMATE speed estimation — see src/speed_estimation.py's module docstring for
+# the full honest caveat. point1/point2 visually estimated (not surveyed) at the same
+# depth as the counting line, spanning roughly one travel lane, assigned the nominal
+# US lane width (~3.5m) — historically the Golden Gate Bridge's original lanes were
+# narrower than this (~3.3m), so this is a rough approximation, not a precise figure.
+speed_calibration:
+  point1: [820, 750]
+  point2: [950, 750]
+  real_world_distance_m: 3.5

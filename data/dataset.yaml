@@ -1,0 +1,11 @@
+path: C:\Users\anne\Documents\Projects\real-time-traffic-classifier\data\processed
+train: images/train
+val: images/val
+test: images/test
+nc: 5
+names:
+- Ambulance
+- Bus
+- Car
+- Motorcycle
+- Truck

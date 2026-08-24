@@ -1,0 +1,61 @@
+# Virtual environment
+.venv/
+venv/
+
+# Claude Code project-local settings (local paths, tool-permission history —
+# not meant for a public repo)
+.claude/
+
+# Pretrained weights Ultralytics auto-downloads to the repo root on first run
+/yolo11n.pt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Datasets (large, not committed — see README for source/license + download instructions)
+data/raw/**
+data/processed/**
+data/processed_stage2/**
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/processed_stage2/.gitkeep
+!data/*.yaml
+
+# Model weights (large binaries — track via README / release assets, not git)
+models/*.pt
+models/*.onnx
+models/*.engine
+!models/README.md
+
+# Outputs (generated artifacts)
+outputs/videos/*
+outputs/metrics/*
+outputs/events/*
+outputs/training_runs/*
+!outputs/videos/.gitkeep
+!outputs/metrics/.gitkeep
+!outputs/events/.gitkeep
+!outputs/training_runs/.gitkeep
+
+# Ultralytics' own default runs/ dir, in case a relative --project isn't given
+runs/
+
+# MLflow
+mlruns/
+mlartifacts/
+mlflow.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+
+# Env files
+.env

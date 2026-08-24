@@ -1,0 +1,47 @@
+# Real-Time Traffic Intelligence — Python dependencies
+#
+# IMPORTANT: torch/torchvision are NOT listed here on purpose.
+# This machine has no NVIDIA GPU (integrated AMD Radeon 890M only), so PyTorch
+# must be installed from the CPU-only wheel index FIRST, before this file:
+#
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements.txt
+#
+# If you later train on Google Colab or a CUDA machine, install the matching
+# CUDA build of torch there instead — everything else below is hardware-agnostic.
+
+# Core
+numpy
+pandas
+
+# Computer vision
+opencv-python
+ultralytics
+
+# Evaluation / viz
+matplotlib
+seaborn
+
+# Dashboard
+streamlit
+
+# Experiment tracking
+mlflow
+
+# Testing
+pytest
+
+# Config
+pyyaml
+python-dotenv
+
+# Dataset acquisition (Phase 2)
+roboflow
+
+# Inference optimization (Phase 9) — CPU build; this machine has no NVIDIA GPU,
+# so plain `onnxruntime`, not `onnxruntime-gpu`. onnxslim is pulled in
+# automatically by Ultralytics' own export step (model.export(format="onnx"))
+# but pinned here explicitly too, for reproducibility.
+onnx
+onnxruntime
+onnxslim
