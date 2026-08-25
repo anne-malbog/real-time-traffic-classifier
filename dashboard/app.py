@@ -1,15 +1,4 @@
 """Phase 7: Streamlit analytics dashboard.
-
-Reuses the exact same pipeline as src/inference.py (detection -> tracking ->
-counting -> traffic analysis -> event detection -> speed estimation, plus
-the same drawing functions) — nothing here duplicates that logic, it's all
-imported from src/. This file is only the Streamlit UI/orchestration layer.
-
-Run (from the project root, with the venv active):
-
-    .\\.venv\\Scripts\\python.exe -m streamlit run dashboard/app.py
-
-Then open the printed local URL (usually http://localhost:8501).
 """
 
 from __future__ import annotations
@@ -24,8 +13,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
-# Allow running as `streamlit run dashboard/app.py` from the project root
-# without needing the project installed as a package.
+# Running as `streamlit run dashboard/app.py` from the project root without project installed as a package.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from evaluation.plots import COLOR_GRID, COLOR_SURFACE, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, style_axis
@@ -43,14 +31,14 @@ CATEGORICAL = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300",
 SAMPLE_DIR = Path("data/raw/samples")
 
 st.set_page_config(page_title="Real-Time Traffic Intelligence", layout="wide")
-st.title("🚦 Real-Time Traffic Intelligence")
+st.title("Real-Time Traffic Intelligence")
 st.caption(
     "Live detection + tracking + counting + direction/density/congestion + wrong-way/"
-    "stopped/restricted-zone events + approximate speed — all running the same "
+    "stopped/restricted-zone events + approximate speed. All running the same "
     "pipeline as `src/inference.py`, rendered live instead of written to a file."
 )
 
-# --- Sidebar controls -------------------------------------------------------
+# Sidebar controls
 
 with st.sidebar:
     st.header("Configuration")
@@ -66,28 +54,24 @@ with st.sidebar:
     device = st.selectbox("Device", ["cpu", "0"], help="'0' = first GPU, if available")
 
     st.divider()
-    enable_speed = st.checkbox("Estimate speed (approximate — needs calibration in scene config)", value=True)
+    enable_speed = st.checkbox("Estimate speed (approximate needs calibration in scene config)", value=True)
     max_frames = st.slider("Max frames to process (demo limit)", 50, 3000, 400, step=50)
     update_every = st.slider("Refresh UI every N frames", 1, 30, 8, help="Higher = smoother but choppier updates; lower = more responsive but slower overall (CPU)")
 
-    start = st.button("▶ Start Analysis", type="primary", use_container_width=True)
+    start = st.button("Start Analysis", type="primary", use_container_width=True)
 
 if not start:
     st.info("Configure options in the sidebar and click **Start Analysis** to begin.")
     st.caption(
-        "Note: this runs real inference on CPU (no GPU on the dev machine) — expect "
+        "Note: this runs real inference on CPU (no GPU on the dev machine), expect "
         "roughly 10-30 FPS of underlying processing depending on scene density, slower "
         "still with the Streamlit UI refresh overhead."
     )
     st.stop()
 
-# --- Load pipeline -----------------------------------------------------------
+# Load pipeline
 
 scene = load_scene_config(scene_config_path)
-# Class-vocabulary-aware, not hardcoded to COCO — the "Model" field above is
-# free text, so it may point at the COCO baseline, the stage-1 fine-tune, or
-# the stage-2 fine-tune, each with a different id->name mapping. See
-# src/detection.py's vehicle_class_ids_for_model docstring.
 vehicle_classes = vehicle_class_ids_for_model(YOLO(model_path).names)
 
 with st.spinner("Loading model..."):
@@ -102,7 +86,7 @@ with st.spinner("Loading model..."):
 
 speed_enabled = enable_speed and scene["speed_calibration"] is not None
 if enable_speed and not speed_enabled:
-    st.warning("Speed estimation requested but no `speed_calibration` in the scene config — disabled.")
+    st.warning("Speed estimation requested but no `speed_calibration` in the scene config. Disabled.")
 
 cap = cv2.VideoCapture(str(source_path))
 if not cap.isOpened():
@@ -112,7 +96,7 @@ src_fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
 if not (1.0 <= src_fps <= 120.0):
     src_fps = 30.0  # some webm files misreport fps metadata (verified during Phase 4)
 
-# --- Layout ------------------------------------------------------------------
+# Layout 
 
 video_col, metrics_col = st.columns([2, 1])
 with video_col:
@@ -133,7 +117,7 @@ events_placeholder = st.empty()
 
 progress_bar = st.progress(0.0, text="Starting...")
 
-# --- Processing loop -----------------------------------------------------------
+# Processing loop
 
 DENSITY_LABELS = [lvl.label for lvl in (scene["density_thresholds"] or DEFAULT_DENSITY_THRESHOLDS)]
 history = {"t_min": deque(maxlen=200), "vehicles_per_min": deque(maxlen=200), "density_rank": deque(maxlen=200), "avg_speed": deque(maxlen=200)}
@@ -164,11 +148,6 @@ while frame_count < max_frames:
         video_placeholder.image(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB), channels="RGB", use_container_width=True)
         progress_bar.progress(min(frame_count / max_frames, 1.0), text=f"Frame {frame_count}/{max_frames}")
 
-        # A rate computed from near-zero elapsed time explodes toward
-        # infinity (seen for real during verification: an early frame
-        # produced a 4e9 "vehicles/minute" spike that flattened the rest of
-        # the chart). Require a few seconds of real elapsed video time
-        # before trusting this rate at all.
         MIN_ELAPSED_SEC_FOR_RATE = 5.0
         if now >= MIN_ELAPSED_SEC_FOR_RATE:
             vehicles_per_min = len(tracker.tracks) / (now / 60.0)
@@ -181,11 +160,11 @@ while frame_count < max_frames:
             c1.metric("Vehicles Detected", len(tracker.tracks))
             c2.metric("Vehicles / Minute", f"{vehicles_per_min:.1f}" if vehicles_per_min is not None else "warming up...")
             c1.metric("Traffic Density", result.density_label)
-            c2.metric("Congestion", "⚠ DETECTED" if result.congestion["congestion_detected"] else "Clear")
+            c2.metric("Congestion", "DETECTED" if result.congestion["congestion_detected"] else "Clear")
             c1.metric("Avg Est. Speed", f"{result.avg_speed_kmh:.0f} km/h" if result.avg_speed_kmh is not None else "n/a")
             c2.metric("Current FPS", f"{avg_fps:.1f}")
 
-        # --- Vehicle distribution ---
+        # Vehicle distribution
         by_class: dict[str, int] = {}
         for line_result in analytics_pipeline.counter.results.values():
             for k, v in line_result.by_class.items():
@@ -202,7 +181,7 @@ while frame_count < max_frames:
         dist_placeholder.pyplot(fig1)
         plt.close(fig1)
 
-        # --- Traffic over time ---
+        # Traffic over time
         history["t_min"].append(now / 60.0)
         history["vehicles_per_min"].append(vehicles_per_min if vehicles_per_min is not None else float("nan"))
         history["density_rank"].append(DENSITY_LABELS.index(result.density_label) if result.density_label in DENSITY_LABELS else 0)
@@ -226,7 +205,7 @@ while frame_count < max_frames:
         chart_placeholder.pyplot(fig2)
         plt.close(fig2)
 
-        # --- Events table ---
+        # Events table
         if event_log.events:
             df = pd.DataFrame(
                 [
@@ -240,4 +219,4 @@ while frame_count < max_frames:
 
 cap.release()
 progress_bar.progress(1.0, text="Done")
-st.success(f"Analysis complete — processed {frame_count} frames in {time.time() - t_start:.1f}s.")
+st.success(f"Analysis complete: processed {frame_count} frames in {time.time() - t_start:.1f}s.")

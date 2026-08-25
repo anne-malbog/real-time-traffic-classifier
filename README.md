@@ -23,6 +23,10 @@ The system processes traffic video and can detect and track vehicles, count them
 - ONNX inference optimization
 - Unit tests and failure analysis
 
+![Real-Time Traffic Classifier](screenshots/dashboard-1.png)
+![Real-Time Traffic Classifier](screenshots/dashboard-2.png)
+![Real-Time Traffic Classifier](screenshots/dashboard-3.png)
+
 ## Architecture
 
 ![Real-Time Traffic Classifier](screenshots/image-1.png)
