@@ -16,10 +16,10 @@ def make_track(trajectory, timestamps=None):
     )
 
 
-# --- SpeedCalibration --------------------------------------------------------
+# SpeedCalibration
 
 def test_calibration_pixels_per_meter():
-    # 100px spans 10m -> 10 px/m
+    # 100px spans 10m to 10 px/m
     cal = SpeedCalibration(point1=(0, 0), point2=(100, 0), real_world_distance_m=10.0)
     assert cal.pixels_per_meter == pytest.approx(10.0)
 
@@ -42,10 +42,10 @@ def test_calibration_rejects_nonpositive_distance():
         SpeedCalibration(point1=(0, 0), point2=(100, 0), real_world_distance_m=-5.0)
 
 
-# --- estimate_speed_kmh -------------------------------------------------------
+# estimate_speed_kmh
 
 def test_estimate_speed_known_value():
-    # Calibration: 10 px/m. Track moves 100px in 2s -> 50px/s -> 5 m/s -> 18 km/h
+    # Calibration: 10 px/m. Track moves 100px in 2s to 50px/s - 5 m/s - 18 km/h
     cal = SpeedCalibration(point1=(0, 0), point2=(100, 0), real_world_distance_m=10.0)
     track = make_track([(0, 0), (100, 0)], timestamps=[0.0, 2.0])
     assert estimate_speed_kmh(track, cal) == pytest.approx(18.0)
@@ -71,7 +71,6 @@ def test_estimate_speed_none_with_zero_elapsed_time():
 
 def test_estimate_speed_respects_window_sec():
     # Long trajectory: fast at the start, stationary at the end.
-    # A window covering only the stationary tail should report ~0.
     cal = SpeedCalibration(point1=(0, 0), point2=(100, 0), real_world_distance_m=10.0)
     track = make_track(
         [(0, 0), (500, 0), (500, 0), (500, 0)],
@@ -90,7 +89,7 @@ def test_estimate_speed_none_when_window_too_short_for_two_points():
     assert estimate_speed_kmh(track, cal, window_sec=0.001) is None
 
 
-# --- format_speed_label --------------------------------------------------------
+# format_speed_label
 
 def test_format_speed_label_includes_estimate_qualifier():
     label = format_speed_label(42.3)

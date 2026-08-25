@@ -1,27 +1,8 @@
-"""Phase 2, step 3 / Phase 8: fine-tune a YOLO model on the prepared traffic
-dataset, tracked as an MLflow experiment.
+"""Phase 2, step 3 / Phase 8: Train the YOLO model.
 
-Defaults come from training/config.yaml; any of them can be overridden with a
-matching CLI flag, so a single command can reproduce a checked-in default run
-or override just what's being experimented with. Runs identically on CPU or
-GPU (Colab) — only --device and (for real runs) --epochs typically differ.
-
-Every run is logged to MLflow (params: model/dataset/epochs/batch/lr0/imgsz/
-device; metrics: precision/recall/mAP50/mAP50-95/FPS, evaluated the same way
-as evaluation/metrics.py's CLI so numbers are directly comparable across
-tools; artifact: the best.pt weights) under the experiment named by
---mlflow-experiment (or config.yaml's mlflow_experiment field) — e.g.
-traffic-yolo-baseline, traffic-yolo-augmented, traffic-yolo-finetuned,
-traffic-yolo-optimized, matching the spec's example experiment names.
-Local runs land in ./mlruns (gitignored); view with `mlflow ui`.
-
-Usage:
-
-    # Uses every default from config.yaml
-    python -m training.train
-
-    # Override specific hyperparameters
-    python -m training.train --epochs 50 --batch 16 --device 0 --name traffic_v1 --mlflow-experiment traffic-yolo-augmented
+This script fine-tunes YOLO using the prepared traffic dataset and tracks 
+each training run with MLflow. It records the training settings, performance metrics, 
+and the best model so different experiments can be compared.
 
 """
 
@@ -38,21 +19,14 @@ from evaluation.metrics import benchmark_speed, evaluate_detection_metrics
 
 DEFAULT_CONFIG_PATH = Path("training/config.yaml")
 
-# Augmentation knobs deliberately exposed as first-class config (not just left
-# to Ultralytics' internal defaults), because the stage-2 retrain's whole point
-# is to strengthen small/distant-vehicle detection via augmentation (see
-# training/config_stage2_augmented.yaml). Values here are Ultralytics' own
-# defaults, so a config.yaml that doesn't override them trains bit-identically
-# to before this was added — only a config that explicitly sets different
-# values changes behavior.
 AUGMENTATION_DEFAULTS = {
     "scale": 0.5,          # random scale jitter gain, range [1-scale, 1+scale]
     "translate": 0.1,      # random translation, fraction of image size
     "hsv_v": 0.4,           # HSV value/brightness jitter
-    "mosaic": 1.0,          # probability of mosaic (4-image tile) augmentation
+    "mosaic": 1.0,          # mosaic (4-image tile) augmentation
     "close_mosaic": 10,     # epochs before the end where mosaic is disabled
-    "copy_paste": 0.0,      # probability of copy-paste augmentation
-    "copy_paste_mode": "flip",  # "flip" (mirror-paste) or "mixup"
+    "copy_paste": 0.0,      # copy-paste augmentation
+    "copy_paste_mode": "flip",  # "flip" (mirror-paste)
 }
 
 
@@ -62,19 +36,14 @@ def load_config(config_path: Path) -> dict:
 
 
 def train(cfg: dict) -> Path:
-    """Runs training + evaluation, logs everything to MLflow, returns the
-    best.pt weights path."""
+    ## Runs training + evaluation, logs everything to MLflow, returns the best.pt weights path.
     print("=" * 50)
     print("Training configuration")
     for k, v in cfg.items():
         print(f"  {k}: {v}")
     print("=" * 50)
 
-    # MLflow 3.x deprecated the plain filesystem backend ("./mlruns") by
-    # default — it now raises unless you either opt out via
-    # MLFLOW_ALLOW_FILE_STORE=true or use a real backend. Using the
-    # SQLite-backed store MLflow itself recommends: still fully local (a
-    # single .db file, no server), just not the deprecated path.
+
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
     mlflow.set_experiment(cfg.get("mlflow_experiment", "traffic-yolo-baseline"))
     with mlflow.start_run(run_name=cfg["name"]):
@@ -108,10 +77,7 @@ def train(cfg: dict) -> Path:
             iou=cfg["iou"],
             patience=cfg["patience"],
             workers=cfg["workers"],
-            # Resolved to absolute: Ultralytics treats a *relative* project path as
-            # relative to its own global runs/<task>/ base, not the cwd, which
-            # would otherwise put results under runs/detect/outputs/... instead
-            # of the outputs/ layout this project uses.
+
             project=str(Path(cfg["project"]).resolve()),
             name=cfg["name"],
             exist_ok=True,
@@ -121,9 +87,6 @@ def train(cfg: dict) -> Path:
         save_dir = Path(results.save_dir)
         best_weights = save_dir / "weights" / "best.pt"
 
-        # Evaluate the same way evaluation/metrics.py's CLI does, so numbers
-        # logged here are directly comparable to that tool's output — not a
-        # second, differently-computed set of metrics.
         metrics = evaluate_detection_metrics(str(best_weights), cfg["data"], device=cfg["device"], split="test")
         speed = benchmark_speed(str(best_weights), cfg["data"], device=cfg["device"], imgsz=cfg["imgsz"])
 

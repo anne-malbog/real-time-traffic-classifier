@@ -1,18 +1,8 @@
-"""Phase 2, step 1: acquire a labeled dataset from Roboflow.
+"""Phase 2, Step 1: Download the dataset.
 
-Downloads a Roboflow-hosted dataset (already in YOLO format: images + one
-.txt label file per image + a data.yaml) into data/raw/<dataset-slug>/.
-This is the "Acquire/download the dataset" step of the dataset pipeline —
-frame extraction, cleaning, and re-organization into the project's
-images/{train,val,test} + labels/{train,val,test} layout happen in a
-separate step (prepare_dataset.py) so each stage can be verified on its own.
-
-Requires ROBOFLOW_API_KEY in a local .env file (see .env.example).
-
-Usage:
-
-    python -m training.download_dataset --workspace roboflow-gw7yv --project vehicles-openimages --version 1
-
+This script downloads a labeled vehicle dataset from Roboflow in YOLO format. 
+The dataset is saved in data/raw/, while cleaning and organizing the data 
+for training are handled in the next step.
 """
 
 from __future__ import annotations
@@ -40,9 +30,7 @@ def download(workspace: str, project: str, version: int, fmt: str = "yolov8") ->
     proj = rf.workspace(workspace).project(project)
     ver = proj.version(version)
 
-    # Note: the Roboflow SDK's Project object doesn't expose a license field
-    # directly — verify/document license on the project's public page before
-    # using a new dataset (see README's Dataset section for what's confirmed).
+    # Note: the Roboflow SDK's Project object doesn't expose a license field directly. 
     print("=" * 60)
     print(f"Project:      {proj.name}")
     print(f"Public:       {proj.public}")

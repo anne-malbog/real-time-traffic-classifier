@@ -1,21 +1,9 @@
-"""Phase 9: inference optimization — export to ONNX, benchmark PyTorch vs. ONNX
-(and ONNX FP16, where supported), verify accuracy parity, and log everything
-to MLflow (experiment `traffic-yolo-optimized`), matching the same tracked-
-experiment convention as Phase 8's training runs.
+"""Phase 9: Optimize the model for inference.
 
-TensorRT is explicitly out of scope — this project's dev machine has no NVIDIA
-GPU (see README's Limitations); ONNX + ONNX Runtime's CPU execution provider
-is the optimization path that actually applies here.
-
-Accuracy comparison uses the SAME COCO-class-space remapped eval set for both
-variants (evaluation/coco_overlap.py) — the goal here isn't "how good is this
-model at our task" (already covered in the Evaluation section), it's "does
-exporting to ONNX change the model's behavior," so both variants must be
-evaluated against literally the same eval set, not two different ones.
-
-Usage:
-
-    python -m evaluation.optimize --model yolo11n.pt --data data/dataset.yaml
+This script exports the YOLO model to ONNX and compares its speed and 
+accuracy with the original PyTorch model. It also tests ONNX FP16 when 
+supported and logs the results to MLflow. Both versions are evaluated 
+on the same dataset to make sure the comparison is fair.
 
 """
 
@@ -38,22 +26,6 @@ MODELS_DIR = Path("models")
 
 
 def export_onnx(model_path: str, imgsz: int, half: bool = False) -> str | None:
-    """Export to ONNX, saved into models/. Returns the output path, or None if
-    this export variant isn't supported on this machine (e.g. FP16 export
-    commonly requires a CUDA device) — reported honestly by the caller, not
-    silently skipped.
-
-    dynamic=True is NOT optional here — a static-shape export (fixed
-    batch=1, fixed imgsz) silently broke Ultralytics' own batched val()
-    pipeline in testing (mAP50 0.676 -> 0.350 on the exact same weights,
-    same eval set), not because ONNX changed the model's actual predictions
-    (confirmed identical on direct single-image predict() calls) but because
-    a static graph can't service val()'s default multi-image batch and
-    something in the fallback path silently degraded rather than erroring.
-    dynamic=True restores exact parity with the PyTorch baseline (verified:
-    identical P/R/mAP50/mAP50-95 to 3 decimal places). This is real,
-    verified behavior, not a defensive guess — see docs/failure_analysis.md.
-    """
     model = YOLO(model_path)
     try:
         exported = model.export(format="onnx", imgsz=imgsz, half=half, dynamic=True)

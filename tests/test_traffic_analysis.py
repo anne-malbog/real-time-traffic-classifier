@@ -20,7 +20,7 @@ def make_track(trajectory, timestamps=None):
     )
 
 
-# --- direction ---------------------------------------------------------
+# direction
 
 def test_direction_moving_right():
     assert compute_direction([(0, 0), (100, 0)]) == "RIGHT"
@@ -51,7 +51,7 @@ def test_direction_none_with_single_point():
     assert compute_direction([(0, 0)]) is None
 
 
-# --- density -------------------------------------------------------------
+# density 
 
 def test_density_low():
     assert compute_density(5) == "LOW"
@@ -80,7 +80,7 @@ def test_density_custom_thresholds():
     assert compute_density(4, custom) == "BUSY"
 
 
-# --- track speed proxy ----------------------------------------------------
+# track speed proxy 
 
 def test_track_speed_zero_for_stationary():
     track = make_track([(0, 0), (0, 0)], timestamps=[0.0, 1.0])
@@ -88,7 +88,7 @@ def test_track_speed_zero_for_stationary():
 
 
 def test_track_speed_computed_correctly():
-    # moves 30px over 2 seconds -> 15 px/sec average
+    # moves 30px over 2 seconds to 15 px/sec average
     track = make_track([(0, 0), (30, 0)], timestamps=[0.0, 2.0])
     assert compute_track_speed_px_per_sec(track) == 15.0
 
@@ -98,10 +98,10 @@ def test_track_speed_zero_time_delta_safe():
     assert compute_track_speed_px_per_sec(track) == 0.0
 
 
-# --- congestion (multi-signal) --------------------------------------------
+# congestion (multi-signal)
 
 def test_congestion_not_detected_from_density_alone():
-    # HIGH density but all vehicles moving fast -> no congestion
+    # HIGH density but all vehicles moving fast means no congestion
     result = compute_congestion("HIGH", [50.0, 60.0, 55.0])
     assert result["density_sufficient"] is True
     assert result["speed_sufficient"] is False
@@ -109,7 +109,7 @@ def test_congestion_not_detected_from_density_alone():
 
 
 def test_congestion_not_detected_from_slow_speed_alone():
-    # Everyone slow, but density is LOW -> no congestion
+    # Everyone slow, but density is LOW means no congestion
     result = compute_congestion("LOW", [1.0, 2.0, 1.0])
     assert result["density_sufficient"] is False
     assert result["speed_sufficient"] is True

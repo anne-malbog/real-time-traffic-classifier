@@ -1,4 +1,4 @@
-"""Unit tests for TrackManager — pure bookkeeping, no model/video dependency."""
+"""Unit tests for TrackManager, pure bookkeeping, no model/video dependency."""
 
 from src.tracking import TrackManager
 
@@ -64,8 +64,8 @@ def test_trajectory_respects_max_length_cap():
 
 
 def test_class_can_flicker_between_updates_without_losing_identity():
-    """A tracker can occasionally misclassify a frame; the track identity
-    (id) should persist even if class_name changes between updates."""
+    """Tracker can misclassify a frame; the track identity (id) should 
+    persist even if class_name changes between updates."""
     mgr = TrackManager()
     mgr.update([(1, 2, "Car", 0.9, (0, 0, 10, 10))], timestamp=0.0)
     mgr.update([(1, 7, "Truck", 0.6, (1, 1, 11, 11))], timestamp=1.0)

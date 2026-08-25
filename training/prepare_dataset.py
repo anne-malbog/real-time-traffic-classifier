@@ -1,26 +1,8 @@
 """Phase 2, step 2: organize a raw downloaded dataset into the project layout.
 
-Takes a dataset already in YOLO format (images/ + labels/ per split, as
-produced by download_dataset.py) and:
-
-  1. Validates every image actually opens (drops corrupt/unusable files).
-  2. Copies (never moves — data/raw/ stays untouched as the original source)
-     into a project-layout images/{train,val,test} + labels/{train,val,test}
-     directory (location configurable via --output-dir, so multiple prepared
-     datasets — e.g. stage-1 vs stage-2 — can coexist without clobbering
-     each other).
-  3. If the source's own split is unusable (e.g. all images dumped into
-     "train" with valid/test empty — seen with the stage-2 dataset), falls
-     back to a deterministic random 80/10/10 split of the full pooled set
-     instead of silently producing a dataset with zero validation data.
-  4. Writes a dataset.yaml pointing at the reorganized folders, in the
-     format Ultralytics expects.
-
-Usage:
-
-    python -m training.prepare_dataset --source data/raw/vehicles-openimages
-    python -m training.prepare_dataset --source data/raw/vehicle-detection-by9xs \\
-        --output-dir data/processed_stage2 --dataset-yaml data/dataset_stage2.yaml
+Validates images, organizes them into train/val/test folders,
+creates an 80/10/10 split if needed, and generates dataset.yaml.
+The original dataset is kept unchanged.
 
 """
 
@@ -92,8 +74,7 @@ def prepare(
         meta = yaml.safe_load(f)
     class_names = meta["names"]
 
-    # Gather every available source split's (image, label) pairs, keyed by
-    # our target split name.
+    # Split's (image, label) pairs, keyed by target split name.
     pairs_by_split: dict[str, list[tuple[Path, Path | None]]] = {}
     for src_split, dst_split in SPLIT_MAP.items():
         images_dir = source_dir / src_split / "images"
@@ -108,13 +89,11 @@ def prepare(
     stats = {}
 
     if len(populated_splits) >= 2:
-        # Source already provides a usable split — preserve it as-is.
         for dst_split, pairs in pairs_by_split.items():
             stats[dst_split] = _copy_pairs(pairs, dst_split, output_dir)
             print(f"-> {dst_split}: {stats[dst_split]} images copied (source split preserved)")
     else:
-        # Source split is unusable (e.g. everything dumped into "train" with
-        # val/test empty) — pool everything and do our own reproducible split.
+        # everything dumped into "train" with val/test empty
         all_pairs = [p for pairs in pairs_by_split.values() for p in pairs]
         print(f"WARNING: source split unusable (only {populated_splits or 'no'} split(s) populated) "
               f"— pooling all {len(all_pairs)} images and re-splitting "

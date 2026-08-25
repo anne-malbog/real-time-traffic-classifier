@@ -7,9 +7,7 @@ from src.tracking import Track
 
 def make_track(track_id, trajectory, timestamps=None, class_name="Car"):
     timestamps = timestamps or [float(i) for i in range(len(trajectory))]
-    # Track.center is derived from bbox, not trajectory — build a small bbox
-    # centered on the trajectory's last point so track.center matches it,
-    # which is what RestrictedZoneDetector actually checks.
+    # Track.center is from bbox
     x, y = trajectory[-1]
     bbox = (x - 5, y - 5, x + 5, y + 5)
     return Track(
@@ -19,7 +17,7 @@ def make_track(track_id, trajectory, timestamps=None, class_name="Car"):
     )
 
 
-# --- EventLog --------------------------------------------------------------
+# EventLog
 
 def test_event_log_saves_json_and_csv(tmp_path):
     from src.event_detection import Event
@@ -48,7 +46,7 @@ def test_event_log_empty_still_writes_header(tmp_path):
     assert content.count("\n") <= 2  # just header (+ possibly trailing newline)
 
 
-# --- WrongWayDetector --------------------------------------------------------
+# WrongWayDetector
 
 def test_wrong_way_not_flagged_moving_expected_direction():
     detector = WrongWayDetector(expected_direction="DOWN", min_consecutive=3)
@@ -89,12 +87,12 @@ def test_wrong_way_resets_streak_when_direction_corrects():
     wrong = make_track(1, [(0, 100), (0, 80)])   # UP (wrong)
     detector.update([wrong], event_log=log, timestamp=0.0)
     detector.update([wrong], event_log=log, timestamp=1.0)
-    right = make_track(1, [(0, 80), (0, 100)])   # DOWN (correct) — resets streak
+    right = make_track(1, [(0, 80), (0, 100)])   # DOWN (correct) - resets streak
     detector.update([right], event_log=log, timestamp=2.0)
     detector.update([wrong], event_log=log, timestamp=3.0)
     detector.update([wrong], event_log=log, timestamp=4.0)
 
-    # Only 2 consecutive wrong-way observations since the reset — not flagged yet
+    # Only 2 consecutive wrong-way observations since the reset. It is not flagged yet
     assert not detector.is_flagged(1)
 
 
@@ -107,7 +105,7 @@ def test_wrong_way_flagged_only_once():
     assert len(log.events) == 1  # not one event per subsequent frame
 
 
-# --- StoppedVehicleDetector --------------------------------------------------
+# StoppedVehicleDetector
 
 def test_stopped_vehicle_not_flagged_before_duration_threshold():
     detector = StoppedVehicleDetector(movement_threshold_px=5.0, min_stopped_duration_sec=5.0)
@@ -152,7 +150,7 @@ def test_stopped_vehicle_duration_resets_after_moving_again():
     detector.update([still], event_log=log, timestamp=5.0)
     detector.update([still], event_log=log, timestamp=7.0)
 
-    # Only ~3s of continuous stillness since the reset — should not be flagged yet
+    # Only ~3s of continuous stillness since the reset - not flagged yet
     assert log.events == []
 
 
@@ -169,7 +167,7 @@ def test_get_duration_none_when_not_stopped():
     assert detector.get_duration(999, timestamp=0.0) is None
 
 
-# --- RestrictedZoneDetector ---------------------------------------------------
+# RestrictedZoneDetector
 
 SQUARE_ZONE = [(100, 100), (200, 100), (200, 200), (100, 200)]
 

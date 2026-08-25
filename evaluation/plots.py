@@ -1,11 +1,9 @@
-"""Charts for the baseline-vs-fine-tuned comparison and training curves.
+"""Create charts for model results.
 
-Color/layout choices follow the project's data-viz conventions: a fixed
-2-slot categorical pair (never cycled), one y-axis per panel (detection
-metrics 0-1 and speed FPS/ms are different scales, so they're separate
-panels rather than a dual-axis chart), direct value labels since these are
-static PNGs with no hover available, and muted gridlines/ink rather than
-default matplotlib styling.
+This script creates charts for comparing the baseline and fine-tuned models, 
+as well as visualizing training performance. Detection metrics and speed are 
+shown separately to keep the results easy to read.
+
 """
 
 from __future__ import annotations
@@ -15,8 +13,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Fixed categorical slots — slot 1 (blue) always baseline, slot 2 (orange)
-# always fine-tuned. Never swapped or reused for a different meaning.
+# Fixed categorical slots, slot 1 (blue) always baseline, slot 2 (orange)
+# always fine-tuned
 COLOR_BASELINE = "#2a78d6"
 COLOR_FINETUNED = "#eb6834"
 COLOR_SURFACE = "#fcfcfb"
@@ -53,10 +51,7 @@ def _bar_labels(ax, bars, fmt="{:.2f}"):
 
 
 def plot_baseline_vs_finetuned(baseline: dict, finetuned: dict, save_path: str) -> None:
-    """baseline/finetuned: dicts with 'overall' (precision/recall/map50/map50_95)
-    and speed ('fps', 'avg_latency_ms') keys, as produced by evaluation.metrics
-    and evaluation.compare_models.
-    """
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5), facecolor=COLOR_SURFACE)
     fig.suptitle("Baseline (pretrained) vs. Fine-tuned", color=COLOR_TEXT_PRIMARY, fontsize=13, fontweight="bold")
 
@@ -80,7 +75,7 @@ def plot_baseline_vs_finetuned(baseline: dict, finetuned: dict, save_path: str) 
     ax1.set_title("Detection metrics", color=COLOR_TEXT_SECONDARY, fontsize=10)
     ax1.legend(frameon=False, labelcolor=COLOR_TEXT_SECONDARY, loc="upper right")
 
-    # Panel 2: inference speed (FPS) — different scale, own axis, not dual-axis
+    # Panel 2: inference speed (FPS) - different scale, own axis, not dual-axis
     speed_x = np.arange(1)
     style_axis(ax2)
     sb1 = ax2.bar(speed_x - width / 2, [baseline["fps"]], width, color=COLOR_BASELINE, zorder=3)
@@ -98,17 +93,13 @@ def plot_baseline_vs_finetuned(baseline: dict, finetuned: dict, save_path: str) 
     print(f"Saved comparison chart: {save_path}")
 
 
-# Fixed categorical slots for the optimization comparison — same 2-color rule
+# Fixed categorical slots for the optimization comparison same 2-color rule
 # (never cycled), reusing COLOR_BASELINE/COLOR_FINETUNED's slots since a 3rd
 # variant (ONNX FP16) is optional/machine-dependent, not always present.
 _VARIANT_COLORS = [COLOR_BASELINE, COLOR_FINETUNED, "#8a5fc2"]
 
 
 def plot_optimization_comparison(result: dict, save_path: str) -> None:
-    """result: as produced by evaluation.optimize.run_optimization — a dict
-    with 'pytorch', 'onnx_fp32', 'onnx_fp16' (the latter possibly None if
-    unsupported on this machine), each holding 'overall' + 'fps'/'avg_latency_ms'.
-    """
     variants = [("PyTorch\n(FP32)", result["pytorch"])]
     if result["onnx_fp32"]:
         variants.append(("ONNX\n(FP32)", result["onnx_fp32"]))
@@ -119,8 +110,7 @@ def plot_optimization_comparison(result: dict, save_path: str) -> None:
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4.5), facecolor=COLOR_SURFACE)
     fig.suptitle("Inference optimization: PyTorch vs. ONNX", color=COLOR_TEXT_PRIMARY, fontsize=13, fontweight="bold")
 
-    # Panel 1: accuracy parity (mAP50 — the single number that matters most
-    # for "did exporting change behavior")
+    # Panel 1: accuracy parity (mAP50 - the single number that matters most for "did exporting change behavior")
     style_axis(ax1)
     map_vals = [v["overall"]["map50"] for _, v in variants]
     bars = ax1.bar([n for n, _ in variants], map_vals, color=colors, zorder=3, width=0.5)
@@ -128,7 +118,7 @@ def plot_optimization_comparison(result: dict, save_path: str) -> None:
     ax1.set_ylim(0, 1.0)
     ax1.set_title("mAP@50 (accuracy parity)", color=COLOR_TEXT_SECONDARY, fontsize=10)
 
-    # Panel 2: speed (FPS) — the actual point of this comparison
+    # Panel 2: speed (FPS) - the actual point of this comparison
     style_axis(ax2)
     fps_vals = [v["fps"] for _, v in variants]
     bars2 = ax2.bar([n for n, _ in variants], fps_vals, color=colors, zorder=3, width=0.5)

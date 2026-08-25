@@ -1,22 +1,8 @@
-"""Phase 2, step 4: baseline (pretrained) vs. fine-tuned comparison.
+"""Phase 2, Step 4: Compare the pretrained and fine-tuned models.
 
-A fair comparison requires care: the baseline outputs COCO's 80 classes,
-the fine-tuned model outputs this project's 5 classes, and raw class-id
-integers don't mean the same thing in both spaces. This script:
-
-  1. Evaluates the baseline against a COCO-class-remapped copy of the test
-     set (evaluation/coco_overlap.py), restricted to the 4 classes that
-     genuinely exist in COCO (car, motorcycle, bus, truck).
-  2. Evaluates the fine-tuned model normally (its own 5-class dataset.yaml),
-     then reports both (a) the same 4-class overlap subset, for the fair
-     head-to-head against baseline, and (b) its full 5-class performance
-     including Ambulance — a class the baseline has no concept of at all,
-     so that number is reported separately, not as a baseline "win/loss".
-
-Usage:
-
-    python -m evaluation.compare_models --baseline yolo11n.pt --finetuned outputs/training_runs/stage1_finetune/weights/best.pt
-
+This script compares the pretrained YOLO model with the fine-tuned model. 
+It evaluates only the classes both models can recognize for a fair comparison, 
+while classes unique to the fine-tuned model are reported separately.
 """
 
 from __future__ import annotations
@@ -46,8 +32,7 @@ def _macro_average(per_class: dict, keys: list[str]) -> dict:
 def run_comparison(baseline_path: str, finetuned_path: str, data_yaml: str, device: str, split: str) -> dict:
     with open(data_yaml) as f:
         our_names = yaml.safe_load(f)["names"]
-    # dataset.yaml's "names" is a list (index -> name); dict values() also works
-    # if it's ever written as a mapping instead.
+
     all_class_names = list(our_names.values()) if isinstance(our_names, dict) else list(our_names)
 
     baseline_model_names = YOLO(baseline_path).names
@@ -68,8 +53,7 @@ def run_comparison(baseline_path: str, finetuned_path: str, data_yaml: str, devi
     finetuned_speed = benchmark_speed(finetuned_path, data_yaml, device)
     finetuned_full = {**finetuned_metrics, **finetuned_speed}
 
-    # Fair head-to-head: fine-tuned's overlap-only subset (excludes classes with
-    # no COCO equivalent, same classes the baseline was evaluated on).
+
     finetuned_overlap_overall = _macro_average(finetuned_metrics["per_class"], overlap_classes)
     finetuned_overlap = {
         "model": finetuned_path,

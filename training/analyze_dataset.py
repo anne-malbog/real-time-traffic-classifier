@@ -27,7 +27,7 @@ import yaml
 
 from evaluation.plots import COLOR_GRID, COLOR_SURFACE, COLOR_TEXT_MUTED, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, style_axis
 
-# Fixed categorical order — first 5 slots of the project's validated palette,
+# Fixed categorical order
 # assigned to classes in dataset.yaml order and never reassigned/cycled.
 CATEGORICAL = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
 
@@ -70,7 +70,6 @@ def collect_stats(class_names: list[str], processed_dir: Path) -> dict:
 
 
 class Image_open_size:
-    """Small context manager: read just the image dimensions via OpenCV."""
 
     def __init__(self, path: Path):
         self.path = path

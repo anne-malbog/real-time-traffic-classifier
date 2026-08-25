@@ -1,14 +1,21 @@
 """Detection metrics + inference-speed benchmarking for a YOLO checkpoint.
 
-Used both standalone (evaluate one model) and by compare_models.py (baseline
-vs fine-tuned). Deliberately separate from training/train.py's built-in
-validation-during-training so a checkpoint can be re-evaluated later without
-retraining, and so the same function can benchmark a *baseline* pretrained
-model that was never trained on this project's data at all.
+Evaluate model performance.
 
-Usage:
+This script measures a YOLO model's detection accuracy and inference speed. 
+It can be used to evaluate a model separately after training or 
+as part of the baseline vs. fine-tuned model comparison.
 
-    python -m evaluation.metrics --model yolo11n.pt --data data/dataset.yaml
+Run Ultralytics' validation on `split` and return P/R/mAP as a plain dict.
+Get model evaluation metrics.
+    
+This function runs YOLO validation and returns metrics such as precision, 
+recall, and mAP. It also makes sure the correct class metrics are matched 
+when evaluating models with different class sets.
+
+Time raw inference (no NMS/plotting overhead beyond predict()) 
+over up to n_images from the dataset's test split, and report average latency + FPS.
+First inference is excluded from the average (warmup: model/graph init cost).
 
 """
 
@@ -22,17 +29,7 @@ from ultralytics import YOLO
 
 
 def evaluate_detection_metrics(model_path: str, data_yaml: str, device: str = "cpu", split: str = "test") -> dict:
-    """Run Ultralytics' validation on `split` and return P/R/mAP as a plain dict.
 
-    IMPORTANT: results.box.p / .r / .ap50 / .ap are NOT dense arrays indexed by
-    raw class id — they're dense over only the classes that actually had
-    ground-truth instances, in the order given by results.box.ap_class_index.
-    Indexing them by raw class id silently pulls the wrong class's numbers
-    whenever a dataset's classes aren't a contiguous 0..N-1 block that exactly
-    matches the model's own class ordering (e.g. evaluating an 80-class COCO
-    baseline against a 5-class custom dataset.yaml — see evaluation/coco_overlap.py
-    for why raw class ids don't mean the same thing across those two models).
-    """
     model = YOLO(model_path)
     results = model.val(data=data_yaml, device=device, split=split, verbose=False)
 
@@ -60,10 +57,6 @@ def evaluate_detection_metrics(model_path: str, data_yaml: str, device: str = "c
 
 
 def benchmark_speed(model_path: str, data_yaml: str, device: str = "cpu", imgsz: int = 416, n_images: int = 60) -> dict:
-    """Time raw inference (no NMS/plotting overhead beyond predict()) over up to
-    n_images from the dataset's test split, and report average latency + FPS.
-    First inference is excluded from the average (warmup: model/graph init cost).
-    """
     import yaml
 
     with open(data_yaml) as f:

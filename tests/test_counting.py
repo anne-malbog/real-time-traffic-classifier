@@ -54,7 +54,7 @@ def test_vehicle_counting_same_id_never_double_counted():
     counter.update([track])
     assert counter.results["main"].total == 1
 
-    # Same id crosses back and forth repeatedly — still one vehicle.
+    # Same id crosses back and forth repeatedly... still one vehicle.
     track2 = make_track(1, "Car", [(100, 150), (100, 50)])
     counter.update([track2])
     track3 = make_track(1, "Car", [(100, 50), (100, 150)])
@@ -67,7 +67,7 @@ def test_vehicle_counting_no_crossing_no_count():
     line = CountingLine(name="main", p1=(0, 100), p2=(200, 100))
     counter = VehicleCounter([line])
 
-    # Moves entirely above the line — never crosses it.
+    # Moves entirely above the line... never crosses it.
     track = make_track(1, "Car", [(100, 10), (100, 30)])
     counter.update([track])
 
